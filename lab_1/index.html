@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <input id="data">
+    <button onclick="check_data()" >Проверить</button>
+    <script>
+        const check_data = () => {
+            const data = document.getElementById("data").value;
+            alert(data.match(/^(ab)*(cb)*$/)?'Yes':'No')
+        }
+    </script>
+</body>
+</html>
