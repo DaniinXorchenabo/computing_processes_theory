@@ -76,8 +76,8 @@ def main():
 #         print('3.) Введен некорректный символ')
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
 
 
 # graph = {
@@ -104,3 +104,17 @@ if __name__ == '__main__':
 #     print('Введена пустая строка')
 # except ValueError:
 #     print('Введен некорректный символ')
+
+# from fastapi.responses import JSONResponse
+# from fastapi import FastAPI
+#
+# try:
+#     assert False, JSONResponse({"detail": "example"}, headers={})
+# except AssertionError as e:
+#     print(e.args)
+#     # e.args[0]
+#
+# app = FastAPI()
+# @app.exception_handler(AssertionError)
+# async def unicorn_exception_handler(request: Request, exc: AssertionError):
+#     return exc.args[0]
