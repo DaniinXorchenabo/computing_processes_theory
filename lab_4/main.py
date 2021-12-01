@@ -1,6 +1,7 @@
 import re
+import regex
 
-UNARY_OPERATION = r"NOT(?![A-Za-z])|NOT(?![A-Za-z])"
+UNARY_OPERATION = r"NOT(?![A-Za-z])"
 
 # https://dev-gang.ru/article/rekursivnye-reguljarnye-vyrazhenija-v-python-wz6w1co7jp/
 BRACKETS_PARSE = lambda i: fr"(\((?:(?<=[()])[^()]*(?=[()]))*(?:(?{i})*(?:(?<=[()])[^()]*(?=[()])))*(?:(?<=[()])[^()]*(?=[()]))*\))"
@@ -96,24 +97,27 @@ print(OneAssignment(" AAD = 4 5 ;  SDF=2345; DSF =345; SDF= 235; ASFS = 2354 ; "
 
 class OneExpression(BaseItem):
     # ((?:NOT(?![A-Za-z])|-))(\s*\([^)]+\)\s*?|\s*[A-Za-z]+\s*?|\s*[01]\s*?)
+    #
+    # ((?:{UNARY_OPERATION})?)(\s*\([^)]+\)\s*|\s+[A-Za-z]+\s*|\s+[01]\s*)
+    #
     # ((\(([^()]*?)*?(?0)*?([^()]*?)*?\)([^()]*?)*?)([^()]*)*(?0)*?)
     # ((\(([^()]*?(?=[()]))*?(?0)*?([^()]*?(?=[()]))*?\)([^()]*?(?=[()]))*?)([^()]*(?=[()]))*(?0)*?)
 
     # (.*?)(\([^()]*(?=[()])(?<=[()])(?1)     \))
     # (\(((?<=[()])[^()]*(?=[()]))*((?0)*((?<=[()])[^()]*(?=[()])))*((?<=[()])[^()]*(?=[()]))*\))
 
-    # ((?:{UNARY_OPERATION})?)(\s*
-    # {BRACKETS_PARSE(2)}
-    # \s*?|\s*[A-Za-z]+\s*?|\s*[01]\s*?)
-    key = fr"((?:{UNARY_OPERATION})?)(\s*\([^)]+\)\s*|\s+[A-Za-z]+\s*|\s+[01]\s*)"
+    # ((?:{UNARY_OPERATION})?)(\s*{BRACKETS_PARSE(2)}\s*?|\s*[A-Za-z]+\s*?|\s*[01]\s*?)
+    key = fr"(\s*(?:{UNARY_OPERATION})?)(\s*{BRACKETS_PARSE(2)}\s*?|\s*[A-Za-z]+\s*?|\s*[01]\s*?)"
 
     def __new__(cls, data) -> list:
-        assert (data := re.search(cls.key, data))
-        print(data[0], "|", data[1], "|", data[2])
+        print(cls.key)
+        assert (data := regex.search(cls.key, data))
+        print(data)
+        print(data[0], "|", data[1], "|", data[2], "|", data[3], "|")
         return [data[1], data[2]]
 
 
-print(OneExpression(" NOT"))
+print(OneExpression(" NOT(ASR OR 0 AND (1 OR (HELP AND NOT(1 AND 1))) (())) () "))
 
 GRAPH = {
     Program: [InitializingVariables, ProgramBody],
