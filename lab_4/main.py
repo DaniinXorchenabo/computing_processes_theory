@@ -1,5 +1,9 @@
 import re
 
+UNARY_OPERATION = r"NOT(?![A-Za-z])|NOT(?![A-Za-z])"
+
+# https://dev-gang.ru/article/rekursivnye-reguljarnye-vyrazhenija-v-python-wz6w1co7jp/
+BRACKETS_PARSE = lambda i: fr"(\((?:(?<=[()])[^()]*(?=[()]))*(?:(?{i})*(?:(?<=[()])[^()]*(?=[()])))*(?:(?<=[()])[^()]*(?=[()]))*\))"
 
 class BaseItem(object):
     key = r".*"
@@ -54,26 +58,70 @@ class ReadWord(BaseItem):
 print(ReadWord("ASD"))
 
 
-def get_variables_list(data):
-    return [data]
+class ProgramBody(BaseItem):
+    key = r"BEGIN\s+(.*)\s+END"
+
+    def __new__(cls, data) -> list:
+        assert (data := re.search(cls.key, data))
+        print(data[1], "|")
+        return [data[1]]
 
 
-
-def program_body_read(data):
-    return data
+print(ProgramBody("dfsgvsfgvsfVAR ASD=4 : LOGICAL ; sfdgvsdfv BEGIN dkfj jkn? seo, srfks   sdf END"))
 
 
-def read_word(data):
-    return data
+class AssignmentList(BaseItem):
+    key = r"((?:[^=]+\s*=\s*[^;]+\s*;)+)"
+
+    def __new__(cls, data) -> list:
+        assert (data := re.search(r"([^=]+\s*=\s*[^;]+\s*;)\s*((?:\s*[^=]+\s*=\s*[^;]+\s*;\s*)*)", data))
+        print(data[0], "|", data[1], "|", data[2])
+        return [data[1], data[2]]
 
 
-def read_one_char(data):
-    return data
+print(AssignmentList(" AAD = 45;  SDF=2345; DSF =345; SDF= 235; ASFS = 2354 ; "))
 
+
+class OneAssignment(BaseItem):
+    key = r"\s*([^=\s]+)\s*=\s*([^;]+)\s*;"
+
+    def __new__(cls, data) -> list:
+        assert (data := re.search(cls.key, data))
+        print(data[0], "|", data[1], "|", data[2])
+        return [data[1], data[2]]
+
+
+print(OneAssignment(" AAD = 4 5 ;  SDF=2345; DSF =345; SDF= 235; ASFS = 2354 ; "))
+
+
+class OneExpression(BaseItem):
+    # ((?:NOT(?![A-Za-z])|-))(\s*\([^)]+\)\s*?|\s*[A-Za-z]+\s*?|\s*[01]\s*?)
+    # ((\(([^()]*?)*?(?0)*?([^()]*?)*?\)([^()]*?)*?)([^()]*)*(?0)*?)
+    # ((\(([^()]*?(?=[()]))*?(?0)*?([^()]*?(?=[()]))*?\)([^()]*?(?=[()]))*?)([^()]*(?=[()]))*(?0)*?)
+
+    # (.*?)(\([^()]*(?=[()])(?<=[()])(?1)     \))
+    # (\(((?<=[()])[^()]*(?=[()]))*((?0)*((?<=[()])[^()]*(?=[()])))*((?<=[()])[^()]*(?=[()]))*\))
+
+    # ((?:{UNARY_OPERATION})?)(\s*
+    # {BRACKETS_PARSE(2)}
+    # \s*?|\s*[A-Za-z]+\s*?|\s*[01]\s*?)
+    key = fr"((?:{UNARY_OPERATION})?)(\s*\([^)]+\)\s*|\s+[A-Za-z]+\s*|\s+[01]\s*)"
+
+    def __new__(cls, data) -> list:
+        assert (data := re.search(cls.key, data))
+        print(data[0], "|", data[1], "|", data[2])
+        return [data[1], data[2]]
+
+
+print(OneExpression(" NOT"))
 
 GRAPH = {
-    Program: [InitializingVariables],
+    Program: [InitializingVariables, ProgramBody],
     InitializingVariables: [GetListVars],
     GetListVars: [GetListVars, ReadWord],
     ReadWord: [],
+    ProgramBody: [AssignmentList],
+    AssignmentList: [OneAssignment, AssignmentList],
+    OneAssignment: [ReadWord, OneExpression],
+    OneExpression: [],
 }
