@@ -2,7 +2,7 @@ import re
 import regex
 
 UNARY_OPERATION = r"\.NOT\."  # \.NOT\.(?![A-Za-z])
-CONSTANTS = r"(?:0|1)"
+CONSTANTS = r"0|1"
 BINARY_OPERATIONS = r"\.AND\.|\.OR\.|\.IMP\."
 
 # https://dev-gang.ru/article/rekursivnye-reguljarnye-vyrazhenija-v-python-wz6w1co7jp/
@@ -42,7 +42,7 @@ class GetListVars(BaseItem):
 
     def __new__(cls, data) -> tuple[list, dict]:
         assert (data := re.search(r"(?:\s*,\s*)*([A-Z]+)((?:\s*,\s*[A-Z]+)*)", data))
-        print('===', [data[0], "|", data[1], "|", data[2]])
+        # print('===', [data[0], "|", data[1], "|", data[2]])
         return [data[1]] + ([",", data[2]] if bool(data[2]) else []), {0: True, 2: True}
 
 
@@ -79,22 +79,31 @@ class OneAssignment(BaseItem):
     def __new__(cls, data) -> tuple[list, dict]:
         assert (data := re.search(cls.key, data))
         # print(data[0], "|", data[1], "|", data[2])
-        return [data[1], "=", data[2]], {0: True, 2: True}
+        return [str(data[1]) + " =", data[2]], {0: True, 1: True}
+
+
+class AssignmentVariables(BaseItem):
+    key = r"\s*([^=\s]+)\s*="
+
+    def __new__(cls, data) -> tuple[list, dict]:
+        assert (data := re.search(cls.key, data))
+        # print(data[0], "|", data[1], "|", data[2])
+        return [data[1], " ="], {0: True}
 
 
 class OneUnaryExpression(BaseItem):
-    key = fr"(\s*(?:{UNARY_OPERATION})?)(\s*{BRACKETS_PARSE(2)}\s*?|\s*[A-Za-z]+\s*?|\s*{CONSTANTS}\s*?)"
+    key = fr"^(\s*(?:{UNARY_OPERATION})?)(\s*{BRACKETS_PARSE(2)}\s*?|\s*[A-Za-z]+\s*?|\s*{CONSTANTS}\s*?)$"
 
     def __new__(cls, data) -> tuple[list, dict]:
         # print(cls.key)
         assert (data := regex.search(cls.key, data))
         # print(data)
         # print(data[0], "|", data[1], "|", data[2], "|", data[3], "|")
-        return [data[1], data[2]], {0: True, 1: True}
+        return ([data[1]] if bool(data[1]) else []) + [data[2]], {0: True, 1: True}
 
 
 class OneBinaryExpression(BaseItem):
-    key = fr"((\s*{BRACKETS_PARSE(3)}\s*?|\s*[A-Za-z]+\s*?|\s*{CONSTANTS}\s*?)(?:\s*({BINARY_OPERATIONS}))(\s*{BRACKETS_PARSE(6)}\s*?|\s*[A-Za-z]+\s*?|\s*{CONSTANTS}\s*?))"
+    key = fr"^((\s*{BRACKETS_PARSE(3)}\s*?|\s*[A-Za-z]+\s*?|\s*{CONSTANTS}\s*?)(?:\s*({BINARY_OPERATIONS}))(\s*{BRACKETS_PARSE(6)}\s*?|\s*[A-Za-z]+\s*?|\s*{CONSTANTS}\s*?))$"
 
     def __new__(cls, data) -> tuple[list, dict]:
         # print(cls.key)
@@ -123,7 +132,7 @@ class BinaryOperation(BaseItem):
 
 
 class SubExpression(BaseItem):
-    key = fr"\s*{BRACKETS_PARSE(0)}\s*"
+    key = fr"^\s*{BRACKETS_PARSE(0)}\s*$"
 
     def __new__(cls, data) -> tuple[list, dict]:
         assert (data := regex.search(cls.key, data))
@@ -132,7 +141,7 @@ class SubExpression(BaseItem):
 
 
 class ReadConst(BaseItem):
-    key = fr"\s*({CONSTANTS})\s*"
+    key = fr"^\s*({CONSTANTS})\s*$"
 
     def __new__(cls, data) -> tuple[list, dict]:
         assert (data := regex.search(cls.key, data))
@@ -161,8 +170,9 @@ GRAPH = {
     ReadWord: [],
     ProgramBody: [AssignmentList],
     AssignmentList: [OneAssignment, AssignmentList],
-    OneAssignment: [ReadWord, OneUnaryExpression, OneBinaryExpression],
-    OneUnaryExpression: [UnaryOperation, SubExpression],
+    OneAssignment: [AssignmentVariables, OneUnaryExpression, OneBinaryExpression],
+    AssignmentVariables: [ReadWord],
+    OneUnaryExpression: [UnaryOperation, SubExpression, ReadWord, ReadConst],
     OneBinaryExpression: [SubExpression, BinaryOperation],
     SubExpression: [OneUnaryExpression, ReadWord, ReadConst],
     ReadConst: [],
@@ -175,7 +185,6 @@ START = Program
 
 def parser(data):
     result = [None]
-    current = START
 
     tasks = [(START, data, result, 0)]
     next_tasks = []
@@ -186,31 +195,34 @@ def parser(data):
 
             local_res, _is_finish = current_pr(current_data)
             result_arr[index] = [None] * len(local_res)
-            print(result)
+            print(result, "\t|\t", local_res, ">>", current_pr)
             for ind, local_data in enumerate(local_res):
                 # print(local_data, _is_finish.get(ind), local_res, current_pr)
                 find = False
                 for pr in GRAPH[current_pr]:
                     # print('\t\t', local_data, regex.search(pr.key, local_data), pr)
                     if _is_finish.get(ind) and regex.search(pr.key, local_data):
-
                         next_tasks.append((pr, local_data, result_arr[index], ind))
-                        # print('\t\t', local_data, regex.search(pr.key, local_data), pr, next_tasks)
+                        # print('\t\t', local_data, pr)
                         find = True
                 if find is False and bool(local_data):
                     result_arr[index][ind] = local_data
 
         counter += 1
         tasks = next_tasks[:]
-        if counter > 20:
-            break
+        # if counter > 20:
+        #     break
         print(result)
+
+    def recursion_chain(list_: list):
+        return [j for i in list_ for j in (recursion_chain(i) if isinstance(i, list) else (i and [i]) or [])]
 
     print(counter)
     print(result)
     print(tasks)
     print(next_tasks)
+    print(' '.join(recursion_chain(result + [None])))
 
 
-parser("""VAR AS, AW : LOGICAL; BEGIN AS = 1 ; END""")
+parser("""VAR AS, AW, SDFF, DS, SDFG : LOGICAL; BEGIN AS = (1 .OR. (AW .IMP. 0) .AND. 1 .AND. 1 .AND. (1 .OR. .NOT. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. 1))))))))))))))) ; AW = 0; END""")
 # print(GetListVars("AS, AW"))
