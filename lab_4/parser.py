@@ -221,15 +221,21 @@ def parser(data):
     def recursion_chain(list_: list):
         return [j for i in list_ for j in (recursion_chain(i) if isinstance(i, list) else (i and [i]) or [])]
 
-    print(counter)
-    print(result)
-    print(tasks)
-    print(next_tasks)
-    print(' '.join(recursion_chain(result + [None])))
+    print("Максимальный уровень вложенности:", counter)
+    # print(result)
+    # print(tasks)
+    # print(next_tasks)
+    print("Полученная строка:", ' '.join(recursion_chain(result + [None])))
 
 
-parser(
-    """VAR SDFG, AS, AW, SDFF, DS, SDFG : LOGICAL; BEGIN AS = (1 .OR. 0) ; SDFG = (AW .OR. ((1 .AND. 1) .IMP. (.NOT. 0 .OR. (SDFG .OR. ((.NOT. 0) .AND. 1))))); END""")
+# parser("""VAR SDFG, AS, AW, SDFF, DS, SDFG : LOGICAL; BEGIN AS = (1 .OR. 0) ; SDFG = (AW .OR. ((1 .AND. 1) .IMP. (.NOT. 0 .OR. (SDFG .OR. ((.NOT. 0) .AND. 1))))); END""")
 
 # parser("""VAR AS, AW, SDFF, DS, SDFG : LOGICAL; BEGIN AS = (1 .OR. (AW .IMP. 0) .AND. 1 .AND. 1 .AND. (1 .OR. .NOT. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. 1))))))))))))))) ; AW = 0; END""")
 # print(OneBinaryExpression("((1) .OR. (0))"))
+
+
+while True:
+    try:
+        parser(input())
+    except (AssertionError, ValueError, TypeError):
+        print("Ошибка")
