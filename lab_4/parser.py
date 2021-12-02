@@ -1,9 +1,10 @@
 import re
 import regex
 
-UNARY_OPERATION = r"\.NOT\."  # \.NOT\.(?![A-Za-z])
-CONSTANTS = r"0|1"
-BINARY_OPERATIONS = r"\.AND\.|\.OR\.|\.IMP\."
+UNARY = r"(?:\.NOT\.)"  # \.NOT\.(?![A-Za-z])
+CONSTANTS = r"(?:0|1)"
+BINARY = r"(?:\.AND\.|\.OR\.|\.IMP\.)"
+VARIABLES = r"(?:[A-Za-z]+)"
 
 # https://dev-gang.ru/article/rekursivnye-reguljarnye-vyrazhenija-v-python-wz6w1co7jp/
 BRACKETS_PARSE = lambda \
@@ -22,122 +23,38 @@ class BaseItem(object):
 
 
 class Program(BaseItem):
-    key = r".*"
+    key = r"^\s*([^;]+\s*;)\s*(.+)$"
 
     def __new__(cls, data: str) -> tuple[list, dict]:
-        arr = data.split(';', 1)
-        return [arr[0] + ";", arr[1]], {0: True, 1: True}
+        assert (data := re.search(cls.key, data))
+        return [data[1], data[2]], {0: True, 1: True}
 
 
-class InitializingVariables(BaseItem):
-    key = r"VAR\s+(.*)\s*:\s*(.*)\s*;"
+class Init(BaseItem):
+    key = r"^\s*VAR\s+([^:]+):\s*([^;]+)\s*;\s*$"
 
     def __new__(cls, data) -> tuple[list, dict]:
+        # print(cls.key)
         assert (data := re.search(cls.key, data))
         return ["VAR", data[1], ":", data[2], ";"], {1: True}
 
 
-class GetListVars(BaseItem):
-    key = r"\s*(?:,\s*)"
+class ReadManyWords(BaseItem):
+    key = fr"^\s*({VARIABLES})\s*,(\s*{VARIABLES}\s*(?:\s*,\s*{VARIABLES}\s*)*)\s*$"
 
     def __new__(cls, data) -> tuple[list, dict]:
-        assert (data := re.search(r"(?:\s*,\s*)*([A-Z]+)((?:\s*,\s*[A-Z]+)*)", data))
+        assert (data := re.search(cls.key, data))
         # print('===', [data[0], "|", data[1], "|", data[2]])
         return [data[1]] + ([",", data[2]] if bool(data[2]) else []), {0: True, 2: True}
 
 
 class ReadWord(BaseItem):
-    key = r"^\s*([A-Z]+)\s*$"
+    key = fr"^\s*({VARIABLES})\s*$"
 
     def __new__(cls, data) -> tuple[list, dict]:
         assert (data := re.search(cls.key, data))
         # print(data[0], "|")
         return [data[1]], dict()
-
-
-class ProgramBody(BaseItem):
-    key = r"BEGIN\s+(.*)\s+END"
-
-    def __new__(cls, data) -> tuple[list, dict]:
-        assert (data := re.search(cls.key, data))
-        # print(data[1], "|")
-        return ["BEGIN", data[1], "END"], {1: True}
-
-
-class AssignmentList(BaseItem):
-    key = r"((?:[^=]+\s*=\s*[^;]+\s*;)+)"
-
-    def __new__(cls, data) -> tuple[list, dict]:
-        assert (data := re.search(r"([^=]+\s*=\s*[^;]+\s*);\s*((?:\s*[^=]+\s*=\s*[^;]+\s*;\s*)*)", data))
-        # print(data[0], "|", data[1], "|", data[2])
-        return [data[1], ";"] + ([data[2]] if bool(data[2]) else []), {0: True, 2: True}
-
-
-class OneAssignment(BaseItem):
-    key = r"\s*([^=\s]+)\s*=\s*([^;]+)\s*"
-
-    def __new__(cls, data) -> tuple[list, dict]:
-        assert (data := re.search(cls.key, data))
-        # print(data[0], "|", data[1], "|", data[2])
-        return [str(data[1]) + " =", data[2]], {0: True, 1: True}
-
-
-class AssignmentVariables(BaseItem):
-    key = r"\s*([^=\s]+)\s*="
-
-    def __new__(cls, data) -> tuple[list, dict]:
-        assert (data := re.search(cls.key, data))
-        # print(data[0], "|", data[1], "|", data[2])
-        return [data[1], " ="], {0: True}
-
-
-class OneUnaryExpression(BaseItem):
-    key = fr"^(\s*(?:{UNARY_OPERATION})?)(\s*{BRACKETS_PARSE(2)}\s*?|\s*[A-Za-z]+\s*?|\s*{CONSTANTS}\s*?)$"
-
-    def __new__(cls, data) -> tuple[list, dict]:
-        # print(cls.key)
-        assert (data := regex.search(cls.key, data))
-        # print(data)
-        # print(data[0], "|", data[1], "|", data[2], "|", data[3], "|")
-        return ([data[1]] if bool(data[1]) else []) + [data[2]], {0: True, 1: True}
-
-
-class OneBinaryExpression(BaseItem):
-    key = fr"^((\s*{BRACKETS_PARSE(3)}\s*?|\s*[A-Za-z]+\s*?|\s*{CONSTANTS}\s*?)(?:\s*({BINARY_OPERATIONS}))(\s*{BRACKETS_PARSE(6)}\s*?|\s*[A-Za-z]+\s*?|\s*{CONSTANTS}\s*?))$"
-
-    def __new__(cls, data) -> tuple[list, dict]:
-        # print(cls.key)
-        assert (data := regex.search(cls.key, data))
-        # print(data)
-        # print(data[0], "|", data[1], "|", data[2], "|", data[3], "|",  data[4], "|",  data[5], "|",  data[6])
-        return [data[3], data[4], data[6]], {0: True, 1: True, 2: True}
-
-
-class UnaryOperation(BaseItem):
-    key = fr"^\s*({UNARY_OPERATION})\s*$"
-
-    def __new__(cls, data) -> tuple[list, dict]:
-        assert (data := re.search(cls.key, data))
-        # print(data[0], "|", data[1])
-        return [data[1]], dict()
-
-
-class BinaryOperation(BaseItem):
-    key = fr"^\s*({BINARY_OPERATIONS})\s*$"
-
-    def __new__(cls, data) -> tuple[list, dict]:
-        assert (data := re.search(cls.key, data))
-        # print(data[0], "|", data[1])
-        return [data[1]], dict()
-
-
-class SubExpression(BaseItem):
-    key = fr"^\s*{BRACKETS_PARSE(0)}\s*$"
-
-    def __new__(cls, data) -> tuple[list, dict]:
-        assert (data := regex.search(cls.key, data))
-        # print(data[0], "|", data[1])
-        return ["(", str(data[1])[1:-1], ")"], {1: True}
 
 
 class ReadConst(BaseItem):
@@ -148,6 +65,85 @@ class ReadConst(BaseItem):
         # print(data[0], "|", data[1])
         return [data[1]], dict()
 
+
+class Body(BaseItem):
+    key = r"^\s*BEGIN\s+(.*)\s+END\s*$"
+
+    def __new__(cls, data) -> tuple[list, dict]:
+        assert (data := re.search(cls.key, data))
+        # print(data[1], "|")
+        return ["BEGIN", data[1], "END"], {1: True}
+
+
+class StringList(BaseItem):
+    key = r'^\s*([^;]+);\s*((?:\s*[^;]+;\s*)*)\s*$'
+
+    def __new__(cls, data) -> tuple[list, dict]:
+        assert (data := re.search(cls.key, data))
+        # print(data[0], "|", data[1], "|", data[2])
+        return [data[1], ";"] + ([data[2]] if bool(data[2]) else []), {0: True, 2: True}
+
+
+class ParseString(BaseItem):
+    key = fr"^\s*({VARIABLES}\s*=)\s*([^;]+)\s*$"
+
+    def __new__(cls, data) -> tuple[list, dict]:
+        assert (data := re.search(cls.key, data))
+        # print(data[0], "|", data[1], "|", data[2])
+        return [data[1], data[2]], {0: True, 1: True}
+
+
+class AssignmentVariables(BaseItem):
+    key = fr"^\s*({VARIABLES})\s*=\s*$"
+
+    def __new__(cls, data) -> tuple[list, dict]:
+        assert (data := re.search(cls.key, data))
+        # print(data[0], "|", data[1], "|", data[2])
+        return [data[1], " ="], {0: True}
+
+
+class Expression(BaseItem):
+    key = fr'^\s*[^=]*$'
+
+    def __new__(cls, data) -> tuple[list, dict]:
+        assert (data := re.search(cls.key, data))
+        # print(data[0], "|", data[1], "|", data[2])
+        return [data[0]], {0: True}
+
+
+class BracketGroup(BaseItem):
+    key = fr'^\s*\(\s*(.*)\s*\)\s*$'
+
+    def __new__(cls, data) -> tuple[list, dict]:
+        assert (data := re.search(cls.key, data))
+        # print(data[0], "|", data[1], "|", data[2])
+        return [data[1]], {0: True}
+
+
+class BinaryOperations(BaseItem):
+    key = fr'^\s*({BRACKETS_PARSE(2)}|{CONSTANTS}|{VARIABLES})\s*({BINARY})\s*({BRACKETS_PARSE(5)}|{CONSTANTS}|{VARIABLES})\s*$'
+
+    def __new__(cls, data) -> tuple[list, dict]:
+        # print(cls.key)
+        assert (data := regex.search(cls.key, data))
+        # print(data[0], "|", data[1], "|", data[2])
+        return [data[1], data[3], data[4]], {0: True, 2: True}
+
+
+class UnaryOperations(BaseItem):
+    key = fr'^\s*({UNARY})\s*((?:(?:{BRACKETS_PARSE(3)}|{CONSTANTS}|{VARIABLES})\s*(?:{BINARY})\s*(?:{BRACKETS_PARSE(4)}|{CONSTANTS}|{VARIABLES}))|{BRACKETS_PARSE(5)}|{CONSTANTS}|{VARIABLES})\s*$'
+
+    def __new__(cls, data) -> tuple[list, dict]:
+        # print(cls.key)
+        assert (data := regex.search(cls.key, data))
+        # print(data[0], "|", data[1], "|", data[2])
+        return [data[1], data[2]], {0: True, 1: True}
+
+
+# print(UnaryOperations(
+#     " .NOT. ((d(d(d(df)f(dfg)f(g))f)d(d)d(d)d(d)f)) .AND. (---(d(d(d( df)f(dfg)f(g))f)d(d)d(d)d(d)f))  "))
+
+# print(Init("VAR SDFG : LOGICAL;"))
 
 # print(Program("dfsgvsfgvsf VAR ASD=4 : LOGICAL ; sfdgvsdfv ; ; ; "))
 # print(InitializingVariables("dfsgvsfgvsf VAR ASD=4 : LOGICAL ; sfdgvsdfv"))
@@ -164,20 +160,21 @@ class ReadConst(BaseItem):
 # print(ReadConst(" 1 "))
 
 GRAPH = {
-    Program: [InitializingVariables, ProgramBody],
-    InitializingVariables: [GetListVars, ReadWord],
-    GetListVars: [GetListVars, ReadWord],
+    Program: [Init, Body],
+    Init: [ReadWord, ReadManyWords],
+    ReadManyWords: [ReadWord, ReadManyWords],
     ReadWord: [],
-    ProgramBody: [AssignmentList],
-    AssignmentList: [OneAssignment, AssignmentList],
-    OneAssignment: [AssignmentVariables, OneUnaryExpression, OneBinaryExpression],
+    # --
+    Body: [StringList],
+    StringList: [ParseString, StringList],
+    ParseString: [AssignmentVariables, Expression],
     AssignmentVariables: [ReadWord],
-    OneUnaryExpression: [UnaryOperation, SubExpression, ReadWord, ReadConst],
-    OneBinaryExpression: [SubExpression, BinaryOperation],
-    SubExpression: [OneUnaryExpression, ReadWord, ReadConst],
+    Expression: [ReadWord, ReadConst, BracketGroup, BinaryOperations, UnaryOperations],
+    BracketGroup: [Expression],
+    BinaryOperations: [Expression],
+    UnaryOperations: [Expression],
     ReadConst: [],
-    UnaryOperation: [],
-    BinaryOperation: [],
+
 }
 
 START = Program
@@ -205,6 +202,7 @@ def parser(data):
                         next_tasks.append((pr, local_data, result_arr[index], ind))
                         # print('\t\t', local_data, pr)
                         find = True
+                        continue
                 if find is False and bool(local_data):
                     result_arr[index][ind] = local_data
 
@@ -223,6 +221,7 @@ def parser(data):
     print(next_tasks)
     print(' '.join(recursion_chain(result + [None])))
 
+parser("""VAR SDFG, AS, AW, SDFF, DS, SDFG : LOGICAL; BEGIN AS = (1 .OR. 0) ; SDFG = (AW .OR. ((1 .AND. 1) .IMP. (.NOT. 0 .OR. (SDFG .OR. (.NOT. 0 .AND. 1))))); END""")
 
-parser("""VAR AS, AW, SDFF, DS, SDFG : LOGICAL; BEGIN AS = (1 .OR. (AW .IMP. 0) .AND. 1 .AND. 1 .AND. (1 .OR. .NOT. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. 1))))))))))))))) ; AW = 0; END""")
-# print(GetListVars("AS, AW"))
+# parser("""VAR AS, AW, SDFF, DS, SDFG : LOGICAL; BEGIN AS = (1 .OR. (AW .IMP. 0) .AND. 1 .AND. 1 .AND. (1 .OR. .NOT. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. 1))))))))))))))) ; AW = 0; END""")
+# print(OneBinaryExpression("((1) .OR. (0))"))
