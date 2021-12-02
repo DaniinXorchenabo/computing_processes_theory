@@ -1,0 +1,17 @@
+version: "3.5"
+
+services:
+  lab4:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      cache_from:
+        - python
+    image: daniinxorchenabo/computing_processes_theory
+    command: python /code/labs/parser.py
+
+    volumes:
+      - type: bind
+        source: .
+        target: /code/gh_server
+
