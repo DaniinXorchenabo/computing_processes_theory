@@ -112,12 +112,12 @@ class Expression(BaseItem):
 
 
 class BracketGroup(BaseItem):
-    key = fr'^\s*\(\s*(.*)\s*\)\s*$'
+    key = fr'^\s*{BRACKETS_PARSE(1)}\s*$'
 
     def __new__(cls, data) -> tuple[list, dict]:
-        assert (data := re.search(cls.key, data))
+        assert (data := regex.search(cls.key, data))
         # print(data[0], "|", data[1], "|", data[2])
-        return [data[1]], {0: True}
+        return ["(", str(data[1])[1: -1], ")"], {1: True}
 
 
 class BinaryOperations(BaseItem):
@@ -137,14 +137,14 @@ class UnaryOperations(BaseItem):
         # print(cls.key)
         assert (data := regex.search(cls.key, data))
         # print(data[0], "|", data[1], "|", data[2])
-        return [data[1], data[2]], {0: True, 1: True}
+        return [data[1], data[2]], {0: False, 1: True}
 
 
 # print(UnaryOperations(
 #     " .NOT. ((d(d(d(df)f(dfg)f(g))f)d(d)d(d)d(d)f)) .AND. (---(d(d(d( df)f(dfg)f(g))f)d(d)d(d)d(d)f))  "))
 
 # print(Init("VAR SDFG : LOGICAL;"))
-
+# print(BracketGroup("(AW .OR. ((1 .AND. 1) .IMP. (.NOT. 0 .OR. (SDFG .OR. (.NOT. 0 .AND. 1)))))"))
 # print(Program("dfsgvsfgvsf VAR ASD=4 : LOGICAL ; sfdgvsdfv ; ; ; "))
 # print(InitializingVariables("dfsgvsfgvsf VAR ASD=4 : LOGICAL ; sfdgvsdfv"))
 # print('----------', GetListVars("asdfkjh ASD, SDFKJ, DSF, KJDSF asdofjae"))
@@ -188,22 +188,28 @@ def parser(data):
     counter = 0
     while bool(tasks):
         next_tasks = []
-        for [current_pr, current_data, result_arr, index] in tasks:
+        for [current_pr, current_data, result_arr, index, *other] in tasks:
 
             local_res, _is_finish = current_pr(current_data)
             result_arr[index] = [None] * len(local_res)
             print(result, "\t|\t", local_res, ">>", current_pr)
             for ind, local_data in enumerate(local_res):
                 # print(local_data, _is_finish.get(ind), local_res, current_pr)
-                find = False
+                find = 0
                 for pr in GRAPH[current_pr]:
                     # print('\t\t', local_data, regex.search(pr.key, local_data), pr)
                     if _is_finish.get(ind) and regex.search(pr.key, local_data):
-                        next_tasks.append((pr, local_data, result_arr[index], ind))
+                        next_tasks.append((pr, local_data, result_arr[index], ind, current_pr))
                         # print('\t\t', local_data, pr)
-                        find = True
-                        continue
-                if find is False and bool(local_data):
+                        find += 1
+
+                if find == 0 and (bool(GRAPH[current_pr]) and _is_finish.get(ind)):
+                    print(current_pr, local_data, other, "|>>|", GRAPH[current_pr], )
+                    raise ValueError()
+                if find == 2:
+                    print(current_pr, local_data, other, "|>>|", GRAPH[current_pr], )
+                    raise TypeError()
+                if find == 0:
                     result_arr[index][ind] = local_data
 
         counter += 1
@@ -221,7 +227,9 @@ def parser(data):
     print(next_tasks)
     print(' '.join(recursion_chain(result + [None])))
 
-parser("""VAR SDFG, AS, AW, SDFF, DS, SDFG : LOGICAL; BEGIN AS = (1 .OR. 0) ; SDFG = (AW .OR. ((1 .AND. 1) .IMP. (.NOT. 0 .OR. (SDFG .OR. (.NOT. 0 .AND. 1))))); END""")
+
+parser(
+    """VAR SDFG, AS, AW, SDFF, DS, SDFG : LOGICAL; BEGIN AS = (1 .OR. 0) ; SDFG = (AW .OR. ((1 .AND. 1) .IMP. (.NOT. 0 .OR. (SDFG .OR. ((.NOT. 0) .AND. 1))))); END""")
 
 # parser("""VAR AS, AW, SDFF, DS, SDFG : LOGICAL; BEGIN AS = (1 .OR. (AW .IMP. 0) .AND. 1 .AND. 1 .AND. (1 .OR. .NOT. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. 1))))))))))))))) ; AW = 0; END""")
 # print(OneBinaryExpression("((1) .OR. (0))"))
