@@ -8,10 +8,11 @@ TYPE_WORD_LIST = ['LOGICAL']
 TYPE_WORD =  r"%s\s*[A-Za-z]+" % "".join([rf"(?!\s*{i}\s+)" for i in KEYWORDS if i not in TYPE_WORD_LIST])
 LITERAL = r"(?:0|1)"
 PARAM_TYPE = r"(?:LOGICAL)"
-UNARY_OPs = frozenset([".NOT."])
+UNARY_OPs = frozenset([r".NOT."])
 UNARY = rf"(?:%s)" % "|".join([i.replace('.', r'\.') for i in UNARY_OPs])
-BINARY_OPs = frozenset([".OR.", ".IMP.", ".AND."])
-BINARY = r"(?:%s)" % "|".join([i.replace('.', r'\.') for i in BINARY_OPs])
+BINARY_OPs = frozenset([r"\.OR\.", r"\.IMP\.", r"\.AND\."])
+# BINARY = r"(?:%s)" % r"|".join([i.replace(r'.', r'.') for i in BINARY_OPs])
+BINARY = r"(?:\.OR\.|\.IMP\.|\.AND\.)"
 
 
 class Stats(enum.Enum):
@@ -85,6 +86,7 @@ graph = {
     (rf"{LITERAL}", S.s31, "("): (S.s32, None, None),
     (rf"{LITERAL}", S.s31, UNARY_OPs): (S.s32, SOp.del_, None),
 
+    (rf"{BINARY}", S.s32, None): (S.s33, None, None),
     (rf"{BINARY}", S.s32, "("): (S.s33, None, None),
 
     (rf"\)", S.s32, "("): (S.s32, SOp.del_, None),
@@ -155,6 +157,10 @@ def parser(data: str):
         elif val[1] == SOp.change:
             shop[-1] = reg[1]
         assert 0 < len(shop) < SHOP_DEEP, f"Магазин либо переполнен, либо попытка удалить пустой магазин {shop}"
+    assert shop == [None], "Магазин должен быть пустым в конце программы"
 
 
-parser("VAR SDFG : LOGICAL; BEGIN AS = .NOT. AS ; END  ")
+
+
+
+
