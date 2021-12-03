@@ -160,6 +160,33 @@ def parser(data: str):
     assert shop == [None], "Магазин должен быть пустым в конце программы"
 
 
+parser("VAR SDFG : LOGICAL; BEGIN AS = (.NOT. (1 .OR. (SDFF .OR. 0))) ; END  ")
+
+def test():
+    parser("VAR SDFG : LOGICAL; BEGIN AS = 1; END  ")
+    parser("VAR SDFG, SDF, SDF : LOGICAL; BEGIN AS = 1; END  ")
+    parser("VAR SDFG : LOGICAL; BEGIN AS = 1; DE = 0; END  ")
+    parser("VAR SDFG : LOGICAL; BEGIN AS = JSDFSEGF; END  ")
+    parser("VAR SDFG : LOGICAL; BEGIN AS = 1; AS = 1; AS = 1; AS = 1; AS = 1; END  ")
+    parser("VAR SDFG : LOGICAL; BEGIN AS = .NOT. 1 ; END  ")
+    parser("VAR SDFG : LOGICAL; BEGIN AS = 1 .AND. SD ; END  ")
+    parser("VAR SDFG : LOGICAL; BEGIN AS = 0 .OR. 1 ; END  ")
+    parser("VAR SDFG : LOGICAL; BEGIN AS = SDF .IMP. 1 ; END  ")
+    parser("VAR SDFG : LOGICAL; BEGIN AS = .NOT. 1 .AND. 0 ; END  ")
+    parser("VAR SDFG : LOGICAL; BEGIN AS = (1) ; END  ")
+    parser("VAR SDFG : LOGICAL; BEGIN AS = .NOT. (1) ; END  ")
+    parser("VAR SDFG : LOGICAL; BEGIN AS = (.NOT. 1) ; END  ")
+    parser("VAR SDFG : LOGICAL; BEGIN AS = (1 .AND. 0) ; END  ")
+    parser("VAR SDFG : LOGICAL; BEGIN AS = (.NOT. 1 .AND. 0) ; END  ")
+    parser("VAR SDFG : LOGICAL; BEGIN AS = (((((0))))) ; END  ")
+    parser("VAR SDFG : LOGICAL; BEGIN AS = (.NOT. (1)) ; END  ")
+    parser("VAR SDFG : LOGICAL; BEGIN AS = (.NOT. (1 .OR. SDFF)) ; END  ")
+    parser("VAR SDFG : LOGICAL; BEGIN AS = (.NOT. (1 .OR. (SDFF .OR. 0))) ; END  ")
+
+
+
+
+
 
 
 
