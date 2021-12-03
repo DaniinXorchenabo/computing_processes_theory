@@ -201,6 +201,111 @@ def parser(data: str):
     assert shop == [None], "Магазин должен быть пустым в конце программы"
 
 
+try:
+    parser("VAR AS : LOGICAL;BEGIN AS = 1 .OR. (1 .OR. 1) .OR. 1;  END")
+    raise Exception()
+except (AssertionError) as e:
+    print(e)
+    print('Ok')
+
+def test():
+    parser("VAR AS : LOGICAL; BEGIN AS = 1; END  ")
+    parser("VAR AS : LOGICAL;BEGIN AS = (1) .AND. 1;  END")
+    parser("VAR AS : LOGICAL;BEGIN AS = .NOT. 0;  END")
+    parser("VAR VARR : LOGICAL;BEGIN VARR = 1;  END  ")
+    parser("VAR AS, SDF, SDFF : LOGICAL; BEGIN AS = 1; END  ")
+    parser("VAR AS, DE : LOGICAL; BEGIN AS = 1; DE = 0; END  ")
+    parser("VAR AS, JSDFSEGF : LOGICAL; BEGIN JSDFSEGF = 1; AS = JSDFSEGF; END  ")
+    parser("VAR AS : LOGICAL; BEGIN AS = 1; AS = 1; AS = 1; AS = 1; AS = 1; END  ")
+    parser("VAR AS : LOGICAL; BEGIN AS = .NOT. 1 ; END  ")
+    parser("VAR AS, SD : LOGICAL; BEGIN SD=0; AS = 1 .AND. SD ; END  ")
+    parser("VAR AS : LOGICAL; BEGIN AS = 0 .OR. 1 ; END  ")
+    parser("VAR AS, SDF : LOGICAL; BEGIN SDF=0;AS = SDF .IMP. 1 ; END  ")
+    parser("VAR AS : LOGICAL; BEGIN AS = .NOT. 1 .AND. 0 ; END  ")
+    parser("VAR AS : LOGICAL; BEGIN AS = (1) ; END  ")
+    parser("VAR AS : LOGICAL; BEGIN AS = .NOT. (1) ; END  ")
+    parser("VAR AS : LOGICAL; BEGIN AS = (.NOT. 1) ; END  ")
+    parser("VAR AS : LOGICAL; BEGIN AS = (1 .AND. 0) ; END  ")
+    parser("VAR AS : LOGICAL; BEGIN AS = (.NOT. 1 .AND. 0) ; END  ")
+    parser("VAR AS : LOGICAL; BEGIN AS = (((((0))))) ; END  ")
+    parser("VAR AS : LOGICAL; BEGIN AS = (.NOT. (1)) ; END  ")
+    parser("VAR AS : LOGICAL;BEGIN AS = (((((((((1) .AND. 1) .AND. 1)))))));  END")
+    parser("VAR AS, SDFF : LOGICAL; BEGIN SDFF=0;AS = (.NOT. (1 .OR. SDFF)) ; END  ")
+    parser("VAR AS, SDFF : LOGICAL; BEGIN SDFF=0;AS = (.NOT. (1 .OR. (SDFF .OR. 0))) ; END  ")
+    parser(
+        "VAR SDFG, AS, AW, SDFF, DS : LOGICAL; BEGIN SDFG=1; AS = (1 .OR. 0); AW=0; SDFG = (AW .OR. ((1 .AND. 1) .IMP. (.NOT. 0 .OR. (SDFG .OR. (0 .AND. 1))))); END ")
+
+    error_tests = [
+        "",
+        "VAR",
+        "VAR  : LOGICAL; BEGIN AS = 1; END  ",
+        "VAR: ; BEGIN AS = 1; END  ",
+        "VARDD : LOGICAL; BEGIN AS = 1; END  ",
+        "VAR DD, : LOGICAL; BEGIN AS = 1; END  ",
+        "VAR DD, DF, : LOGICAL; BEGIN AS = 1; END  ",
+        "VAR DD, DF, SD  LOGICAL; BEGIN AS = 1; END  ",
+        "VAR DD, DF, SD,  LOGICAL; BEGIN AS = 1; END  ",
+        "VAR DD, DF, SD,  LOGICAL : LOGICAL; BEGIN AS = 1; END  ",
+        "VAR END : LOGICAL; BEGIN AS = 1; END  ",
+        "VAR BEGIN : LOGICAL; BEGIN AS = 1; END  ",
+        "VAR SD : LOGICAL1; BEGIN AS = 1; END  ",
+        "VAR SD : BOOL; BEGIN AS = 1; END  ",
+        "VAR SD : LOGICAL SD; BEGIN AS = 1; END  ",
+        "VAR SD : LOGICAL, SD; BEGIN AS = 1; END  ",
+        "VAR SD : LOGICAL, BEGIN SD = 1; END  ",
+        "VAR SD : LOGICAL, BEGIN; SD = 1; END  ",
+        "VAR SD : LOGICAL;  SD = 1; END  ",
+        "VAR SD : LOGICAL;BEGIN1  SD = 1; END  ",
+        "VAR SD : LOGICAL;BEGINSD = 1; END  ",
+        "VAR SD, SD : LOGICAL;BEGIN SD = 1; END  ",
+        "VAR SD : LOGICAL;BEGIN AS = 1; END  ",
+        "VAR SD : LOGICAL;BEGIN SD = SD; END  ",
+        "VAR SD : LOGICAL;BEGIN SD = AS; END  ",
+        "VAR SD : LOGICAL;BEGIN SD = 1 .AND. AS ; END  ",
+        "VAR SD : LOGICAL;BEGIN SD = 1 .AND. ASF ; END  ",
+        "VAR SD : LOGICAL;BEGIN 1 = 0;  END  ",
+        "VAR SD : LOGICAL;BEGIN BEGIN = 0;  END  ",
+        "VAR SD : LOGICAL;BEGIN SD = END;  END  ",
+        "VAR SD : LOGICAL;BEGIN SD = END;  END  ",
+        "VAR AS : LOGICAL;BEGIN AS = 1  END  ",
+        "VAR AS : LOGICAL;BEGIN AS = ;  END  ",
+        "VAR AS : LOGICAL;BEGIN AS ;  END  ",
+        "VAR AS : LOGICAL;BEGIN AS  END  ",
+        "VAR AS, DE : LOGICAL;BEGIN AS =0; DE=1 END  ",
+        "VAR AS, DE : LOGICAL;BEGIN AS =0; DE=1;  ",
+        "VAR AS, DE : LOGICAL;BEGIN AS =0; DE=1;  ENDD",
+        "VAR AS, DE : LOGICAL;BEGIN AS =0; DE=1;  END;",
+        "VAR AS, DE : LOGICAL;BEGIN AS =0; DE=1;  END AS = 0",
+        "VAR AS : LOGICAL;BEGIN AS = ();  END",
+        "VAR AS : LOGICAL;BEGIN AS = (((())));  END",
+        "VAR AS : LOGICAL;BEGIN AS = .NOT. (((())));  END",
+        "VAR AS : LOGICAL;BEGIN AS = .NOT.;  END",
+        "VAR AS : LOGICAL;BEGIN AS = 0 .NOT.;  END",
+        "VAR AS : LOGICAL;BEGIN AS = .NOT. .OR.;  END",
+        "VAR AS : LOGICAL;BEGIN AS = .NOT. 0 .NOT. 1;  END",
+        "VAR AS : LOGICAL;BEGIN AS = .NOT. (0 .NOT. 1);  END",
+        "VAR AS : LOGICAL;BEGIN AS = .NOT. (.NOT. 0;  END",
+        "VAR AS : LOGICAL;BEGIN AS = ( .NOT. );  END",
+        "VAR AS : LOGICAL;BEGIN AS = ( .AND. );  END",
+        "VAR AS : LOGICAL;BEGIN AS = (0 .AND. .NOT. 1);  END",
+        "VAR AS : LOGICAL;BEGIN AS = .AND. 1;  END",
+        "VAR AS : LOGICAL;BEGIN AS = (1) .AND. ;  END",
+        "VAR AS : LOGICAL;BEGIN AS = (1) .AND. 1 .AND. 1;  END",
+        "VAR AS : LOGICAL;BEGIN AS = (1) .NOT. 1 .AND. 1;  END",
+        "VAR AS : LOGICAL;BEGIN AS = ((((((((((((((((1) .AND. 1) .AND. 1))))))))))))));  END",
+        "VAR AS : LOGICAL;BEGIN AS = (1) (.AND.) (1);  END",
+        "VAR AS : LOGICAL;BEGIN AS = (1) .AND. (1)(0 .OR. 1);  END",
+        "VAR AS : LOGICAL;BEGIN AS = (1) .AND. (1) .OR. (0 .OR. 1);  END",
+    ]
+    for ind, i in enumerate(error_tests):
+        try:
+            parser(i)
+            print('Тест номер', ind, "провален")
+            raise Exception()
+        except (AssertionError) as e:
+            pass
+    print('Все тесты прошли успешно')
+
 
 # test()
 
