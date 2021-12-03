@@ -27,7 +27,7 @@ class Program(BaseItem):
 
     def __new__(cls, data: str) -> tuple[list, dict]:
         assert (data := re.search(cls.key, data))
-        return [data[1], data[2]], {0: True, 1: True}
+        return [data[1], data[2]], {0: "Не получается найти часть программы с объявлением переменных", 1: "Не получается найти основное тело программы"}
 
 
 class Init(BaseItem):
@@ -36,7 +36,7 @@ class Init(BaseItem):
     def __new__(cls, data) -> tuple[list, dict]:
         # print(cls.key)
         assert (data := re.search(cls.key, data))
-        return ["VAR", data[1], ":", data[2], ";"], {1: True}
+        return ["VAR", data[1], ":", data[2], ";"], {1: "Не получается найти объявление переменных"}
 
 
 class ReadManyWords(BaseItem):
@@ -45,7 +45,7 @@ class ReadManyWords(BaseItem):
     def __new__(cls, data) -> tuple[list, dict]:
         assert (data := re.search(cls.key, data))
         # print('===', [data[0], "|", data[1], "|", data[2]])
-        return [data[1]] + ([",", data[2]] if bool(data[2]) else []), {0: True, 2: True}
+        return [data[1]] + ([",", data[2]] if bool(data[2]) else []), {0: "Не получается найти объявление переменной", 2: "Не получается найти объявление остальных переменных"}
 
 
 class ReadWord(BaseItem):
@@ -72,7 +72,7 @@ class Body(BaseItem):
     def __new__(cls, data) -> tuple[list, dict]:
         assert (data := re.search(cls.key, data))
         # print(data[1], "|")
-        return ["BEGIN", data[1], "END"], {1: True}
+        return ["BEGIN", data[1], "END"], {1: "Не получается найти инициализацию переменных"}
 
 
 class StringList(BaseItem):
@@ -81,7 +81,7 @@ class StringList(BaseItem):
     def __new__(cls, data) -> tuple[list, dict]:
         assert (data := re.search(cls.key, data))
         # print(data[0], "|", data[1], "|", data[2])
-        return [data[1], ";"] + ([data[2]] if bool(data[2]) else []), {0: True, 2: True}
+        return [data[1], ";"] + ([data[2]] if bool(data[2]) else []), {0: "Некорректная инициализация переменной", 2: "Некорректная инициализация остальных переменных"}
 
 
 class ParseString(BaseItem):
@@ -90,7 +90,7 @@ class ParseString(BaseItem):
     def __new__(cls, data) -> tuple[list, dict]:
         assert (data := re.search(cls.key, data))
         # print(data[0], "|", data[1], "|", data[2])
-        return [data[1], data[2]], {0: True, 1: True}
+        return [data[1], data[2]], {0: "Некорректная инициализируемая переменная", 1: "Некорректное выражение для инициализации переменной"}
 
 
 class AssignmentVariables(BaseItem):
@@ -99,7 +99,7 @@ class AssignmentVariables(BaseItem):
     def __new__(cls, data) -> tuple[list, dict]:
         assert (data := re.search(cls.key, data))
         # print(data[0], "|", data[1], "|", data[2])
-        return [data[1], " ="], {0: True}
+        return [data[1], " ="], {0: "Некорректная инициализируемая переменная"}
 
 
 class Expression(BaseItem):
@@ -108,7 +108,8 @@ class Expression(BaseItem):
     def __new__(cls, data) -> tuple[list, dict]:
         assert (data := re.search(cls.key, data))
         # print(data[0], "|", data[1], "|", data[2])
-        return [data[0]], {0: True}
+        return [data[0]], {0: "Выражение должно быть либо константным литералом, либо переменной,"
+                              " либо скобочной группой, либо бинарной или унарной операцией"}
 
 
 class BracketGroup(BaseItem):
@@ -117,7 +118,7 @@ class BracketGroup(BaseItem):
     def __new__(cls, data) -> tuple[list, dict]:
         assert (data := regex.search(cls.key, data))
         # print(data[0], "|", data[1], "|", data[2])
-        return ["(", str(data[1])[1: -1], ")"], {1: True}
+        return ["(", str(data[1])[1: -1], ")"], {1: "Распаковка скобочной группы прошла неудачно"}
 
 
 class BinaryOperations(BaseItem):
@@ -127,7 +128,7 @@ class BinaryOperations(BaseItem):
         # print(cls.key)
         assert (data := regex.search(cls.key, data))
         # print(data[0], "|", data[1], "|", data[2])
-        return [data[1], data[3], data[4]], {0: True, 2: True}
+        return [data[1], data[3], data[4]], {0: "Первая часть бинарной операции выделилась не удачно", 2: "Вторая часть бинарной операции выделилась неудачно"}
 
 
 class UnaryOperations(BaseItem):
@@ -137,7 +138,7 @@ class UnaryOperations(BaseItem):
         # print(cls.key)
         assert (data := regex.search(cls.key, data))
         # print(data[0], "|", data[1], "|", data[2])
-        return [data[1], data[2]], {0: False, 1: True}
+        return [data[1], data[2]], {1: "Аргумент унарной операции выделился корректно"}
 
 
 # print(UnaryOperations(
@@ -205,10 +206,10 @@ def parser(data):
 
                 if find == 0 and (bool(GRAPH[current_pr]) and _is_finish.get(ind)):
                     print(current_pr, local_data, other, "|>>|", GRAPH[current_pr], )
-                    raise ValueError()
-                if find == 2:
+                    raise ValueError(_is_finish.get(ind, "Неизвестная ошибка") + f"\nПолучено: {local_data}")
+                if find > 1:
                     print(current_pr, local_data, other, "|>>|", GRAPH[current_pr], )
-                    raise TypeError()
+                    raise TypeError("Ошибка в реализации. Граф не является детерминированным")
                 if find == 0:
                     result_arr[index][ind] = local_data
 
@@ -237,5 +238,5 @@ def parser(data):
 while True:
     try:
         parser(input())
-    except (AssertionError, ValueError, TypeError):
-        print("Ошибка")
+    except (AssertionError, ValueError, TypeError) as e:
+        print("Ошибка:", e)
