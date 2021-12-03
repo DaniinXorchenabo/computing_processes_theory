@@ -104,6 +104,7 @@ graph = {
     (rf"\)", S.s32, "("): (S.s32, SOp.del_, None),
     (rf"\)", S.s32, BINARY_OPs): (S.s32, SOp.del_, ReadDataStatus.not_read),
     (rf";", S.s32, None): (S.s21, None, None),
+    (rf";", S.s32, BINARY_OPs): (S.s21, SOp.del_, None),
 
     # (rf"{WORDS}", S.s33, "("): (S.s34, None, None),
     (rf"{WORDS}", S.s33, BINARY_OPs): (S.s35, None, None),
@@ -202,7 +203,7 @@ def parser(data: str):
 
 
 try:
-    parser("VAR AS : LOGICAL;BEGIN AS = 1 .OR. (1 .OR. 1) .OR. 1;  END")
+    parser("VAR AS : LOGICAL;BEGIN AS = 1 .OR. ((1 .OR. 1) .OR. 1);  END")
     raise Exception()
 except (AssertionError) as e:
     print(e)
@@ -296,6 +297,7 @@ def test():
         "VAR AS : LOGICAL;BEGIN AS = (1) (.AND.) (1);  END",
         "VAR AS : LOGICAL;BEGIN AS = (1) .AND. (1)(0 .OR. 1);  END",
         "VAR AS : LOGICAL;BEGIN AS = (1) .AND. (1) .OR. (0 .OR. 1);  END",
+        "VAR AS : LOGICAL;BEGIN AS = 1 .OR. (1 .OR. 1) .OR. 1;  END",
     ]
     for ind, i in enumerate(error_tests):
         try:
