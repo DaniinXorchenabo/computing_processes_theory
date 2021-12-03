@@ -203,7 +203,7 @@ def parser(data: str):
 
 
 try:
-    parser("VAR AS : LOGICAL;BEGIN AS = 1 .OR. ((1 .OR. 1) .OR. 1);  END")
+    parser("VAR AS : LOGICAL;BEGIN AS = (1 .OR. ((0 .OR. 1) .OR. (( (.NOT. 0 .OR. 0)) .OR. 1)) ) .AND. 0 ;  END")
     raise Exception()
 except (AssertionError) as e:
     print(e)
@@ -233,6 +233,8 @@ def test():
     parser("VAR AS : LOGICAL;BEGIN AS = (((((((((1) .AND. 1) .AND. 1)))))));  END")
     parser("VAR AS, SDFF : LOGICAL; BEGIN SDFF=0;AS = (.NOT. (1 .OR. SDFF)) ; END  ")
     parser("VAR AS, SDFF : LOGICAL; BEGIN SDFF=0;AS = (.NOT. (1 .OR. (SDFF .OR. 0))) ; END  ")
+    parser("VAR AS : LOGICAL;BEGIN AS = 1 .OR. ((1 .OR. 1) .OR. 1);  END")
+    parser("VAR AS : LOGICAL;BEGIN AS = 1 .OR. (.NOT. 0) ;  END")
     parser(
         "VAR SDFG, AS, AW, SDFF, DS : LOGICAL; BEGIN SDFG=1; AS = (1 .OR. 0); AW=0; SDFG = (AW .OR. ((1 .AND. 1) .IMP. (.NOT. 0 .OR. (SDFG .OR. (0 .AND. 1))))); END ")
 
@@ -298,6 +300,12 @@ def test():
         "VAR AS : LOGICAL;BEGIN AS = (1) .AND. (1)(0 .OR. 1);  END",
         "VAR AS : LOGICAL;BEGIN AS = (1) .AND. (1) .OR. (0 .OR. 1);  END",
         "VAR AS : LOGICAL;BEGIN AS = 1 .OR. (1 .OR. 1) .OR. 1;  END",
+        "VAR AS : LOGICAL;BEGIN AS = 01010101 ;  END",
+        "VAR AS : LOGICAL;BEGIN 00 = 1 ;  END",
+        "VAR AS : LOGICAL;BEGIN AS = (1 .OR. (0 .OR. 1) .OR. 0) ;  END"
+        "VAR AS : LOGICAL;BEGIN AS = (1 .OR. ((0 .OR. 1) .OR. (0 .OR. 0)) .OR. 1) ;  END",
+        "VAR AS : LOGICAL;BEGIN AS = (1 .OR. ((0 .OR. 1) .OR. ( (.NOT. 0 .OR. 0)) .OR. 1) ) ;  END",
+        "VAR AS : LOGICAL;BEGIN AS = (1 .OR. ((0 .OR. 1) .OR. (( (.NOT. 0 .OR. 0)) .OR. 1)) ) .AND. 0 ;  END",
     ]
     for ind, i in enumerate(error_tests):
         try:
