@@ -5,7 +5,7 @@ KEYWORDS = ["VAR", "END", "BEGIN", "LOGICAL"]
 # ^\s*(?!\s*VAR\s+)(?!\s*END\s+)\s*[A-Z]+
 WORDS = r"%s\s*[A-Za-z]+" % "".join([rf"(?!\s*{i}(?:[^A-Za-z]+|$))" for i in KEYWORDS])
 TYPE_WORD_LIST = ['LOGICAL']
-TYPE_WORD =  r"%s\s*[A-Za-z]+" % "".join([rf"(?!\s*{i}(?:[^A-Za-z]+|$))" for i in KEYWORDS if i not in TYPE_WORD_LIST])
+TYPE_WORD = r"%s\s*[A-Za-z]+" % "".join([rf"(?!\s*{i}(?:[^A-Za-z]+|$))" for i in KEYWORDS if i not in TYPE_WORD_LIST])
 LITERAL = r"(?:0|1)"
 PARAM_TYPE = r"(?:LOGICAL)"
 UNARY_OPs = frozenset([r".NOT."])
@@ -21,6 +21,7 @@ class Stats(enum.Enum):
     s12 = "s12"  # после получения запятой ждём считывания еще одного слова
     s13 = "s13"  # Ожидаем считывания типа переменной
     s14 = "s14"  # Ожидаем завершения части программы головы
+    s15 = "s15"  # состояние после ввода слова
     s20 = "s20"  # Ожидаем начала тела программы
     s21 = "s21"  # считываем инициалирируемую переменную
     s22 = "s22"  # Ожидаем считывание знака равенства для инициализируемой переменной
@@ -54,12 +55,10 @@ SHOP_DEEP = 12
 
 ALL_SHOP_STATES = [".NOT.", "(", None]
 
-
 variable_declaration_stats = [S.s11, S.s12]
 variable_init_stats = [S.s21]
 init_variable_end_stats = [S.s32, S.s23]
 use_variable_stats = [S.s30, S.s31, S.s33]
-
 
 
 def exclude_shop_stats(*args):
@@ -67,69 +66,56 @@ def exclude_shop_stats(*args):
 
 
 graph = {
-    (r"VAR\s+", S.s00, None): (S.s11, None, None),
-    (rf"{WORDS}", S.s11, None): (S.s11, None, None),
-    (r",", S.s11, None): (S.s12, None, None),
-    (rf"{WORDS}", S.s12, None): (S.s11, None, None),
-    (r"\:", S.s11, None): (S.s13, None, None),
-    (rf"{PARAM_TYPE}", S.s13, None): (S.s14, None, None),
-    (rf";", S.s14, None): (S.s20, None, None),
-    (rf"BEGIN\s+", S.s20, None): (S.s21, None, None),
-    (rf"{WORDS}", S.s21, None): (S.s22, None, None),
-    (rf"=", S.s22, None): (S.s30, None, None),
+    (r"VAR\s+", S.s00, None): ((S.s11, None, None), "Не получается найти объявление переменной"),
+    (rf"{WORDS}", S.s11, None): ((S.s15, None, None), "Не получается найти объявление следующей переменной или `:` для типа переменных"),
+    (r",", S.s15, None): ((S.s11, None, None), "Не получается найти объявление следующей переменной"),
+    (r"\:", S.s15, None): ((S.s13, None, None), ""),
+    (rf"{PARAM_TYPE}", S.s13, None): ((S.s14, None, None), ""),
+    (rf";", S.s14, None): ((S.s20, None, None), ""),
+    (rf"BEGIN\s+", S.s20, None): ((S.s21, None, None), ""),
+    (rf"{WORDS}", S.s21, None): ((S.s22, None, None), ""),
+    (rf"=", S.s22, None): ((S.s30, None, None), ""),
 
-    (rf"{WORDS}", S.s30, None): (S.s32, None, None),
-    (rf"{WORDS}", S.s30, UNARY_OPs): (S.s32, SOp.del_, None),
-    (rf"{LITERAL}", S.s30, None): (S.s32, None, None),
-    (rf"{LITERAL}", S.s30, UNARY_OPs): (S.s32, SOp.del_, None),
+    (rf"{WORDS}", S.s30, None): ((S.s32, None, None), ""),
+    (rf"{WORDS}", S.s30, UNARY_OPs): ((S.s32, SOp.del_, None), ""),
+    (rf"{LITERAL}", S.s30, None): ((S.s32, None, None), ""),
+    (rf"{LITERAL}", S.s30, UNARY_OPs): ((S.s32, SOp.del_, None), ""),
 
-    (rf"{UNARY}", S.s30, None): (S.s30, SOp.add, None),
+    (rf"{UNARY}", S.s30, None): ((S.s30, SOp.add, None), ""),
 
-    (rf"\(", S.s30, None): (S.s31, SOp.add, None),
-    (rf"\(", S.s30, UNARY_OPs): (S.s31, SOp.change, None),
+    (rf"\(", S.s30, None): ((S.s31, SOp.add, None), ""),
+    (rf"\(", S.s30, UNARY_OPs): ((S.s31, SOp.change, None), ""),
 
-    (rf"{UNARY}", S.s31, "("): (S.s31, SOp.add, None),
-    (rf"\(", S.s31, "("): (S.s31, SOp.add, None),
-    (rf"\(", S.s31, UNARY_OPs): (S.s31, SOp.change, None),
+    (rf"{UNARY}", S.s31, "("): ((S.s31, SOp.add, None), ""),
+    (rf"\(", S.s31, "("): ((S.s31, SOp.add, None), ""),
+    (rf"\(", S.s31, UNARY_OPs): ((S.s31, SOp.change, None), ""),
 
-    (rf"{WORDS}", S.s31, "("): (S.s32, None, None),
-    (rf"{WORDS}", S.s31, UNARY_OPs): (S.s32, SOp.del_, None),
+    (rf"{WORDS}", S.s31, "("): ((S.s32, None, None), ""),
+    (rf"{WORDS}", S.s31, UNARY_OPs): ((S.s32, SOp.del_, None), ""),
 
-    (rf"{LITERAL}", S.s31, "("): (S.s32, None, None),
-    (rf"{LITERAL}", S.s31, UNARY_OPs): (S.s32, SOp.del_, None),
+    (rf"{LITERAL}", S.s31, "("): ((S.s32, None, None), ""),
+    (rf"{LITERAL}", S.s31, UNARY_OPs): ((S.s32, SOp.del_, None), ""),
 
-    (rf"{BINARY}", S.s32, None): (S.s33, SOp.add, None),
-    (rf"{BINARY}", S.s32, "("): (S.s33, SOp.add, None),
+    (rf"{BINARY}", S.s32, None): ((S.s33, SOp.add, None), ""),
+    (rf"{BINARY}", S.s32, "("): ((S.s33, SOp.add, None), ""),
 
-    (rf"\)", S.s32, "("): (S.s32, SOp.del_, None),
-    (rf"\)", S.s32, BINARY_OPs): (S.s32, SOp.del_, ReadDataStatus.not_read),
-    (rf";", S.s32, None): (S.s21, None, None),
-    (rf";", S.s32, BINARY_OPs): (S.s21, SOp.del_, None),
+    (rf"\)", S.s32, "("): ((S.s32, SOp.del_, None), ""),
+    (rf"\)", S.s32, BINARY_OPs): ((S.s32, SOp.del_, ReadDataStatus.not_read), ""),
+    (rf";", S.s32, None): ((S.s21, None, None), ""),
+    (rf";", S.s32, BINARY_OPs): ((S.s21, SOp.del_, None), ""),
 
-    # (rf"{WORDS}", S.s33, "("): (S.s34, None, None),
-    (rf"{WORDS}", S.s33, BINARY_OPs): (S.s35, None, None),
-    # (rf"{WORDS}", S.s33, None): (S.s23, None, None),
-    # (rf"{LITERAL}", S.s33, "("): (S.s34!, None, None),
-    (rf"{LITERAL}", S.s33, BINARY_OPs): (S.s35, None, None),
-    # (rf"{LITERAL}", S.s33, None): (S.s23, None, None),
-    (rf"\(", S.s33, BINARY_OPs): (S.s31, SOp.add, None),
-    # (rf"\(", S.s33, "("): (S.s31, SOp.add, None),
-    # (rf"\(", S.s33, None): (S.s31, SOp.add, None),
+    (rf"{WORDS}", S.s33, BINARY_OPs): ((S.s35, None, None), ""),
+    (rf"{LITERAL}", S.s33, BINARY_OPs): ((S.s35, None, None), ""),
+    (rf"\(", S.s33, BINARY_OPs): ((S.s31, SOp.add, None), ""),
 
-    (rf"\)", S.s34, "("): (S.s32, SOp.del_, None),
+    (rf"\)", S.s34, "("): ((S.s32, SOp.del_, None), ""),
 
-    (rf";", S.s35, BINARY_OPs): (S.s23, SOp.del_, ReadDataStatus.not_read),
-    (rf"\)", S.s35, BINARY_OPs): (S.s34, SOp.del_, ReadDataStatus.not_read),
+    (rf";", S.s35, BINARY_OPs): ((S.s23, SOp.del_, ReadDataStatus.not_read), ""),
+    (rf"\)", S.s35, BINARY_OPs): ((S.s34, SOp.del_, ReadDataStatus.not_read), ""),
 
-    # (rf"{WORDS}", S.s30, "("): (S.s23, None, None),
-    # (rf"{LITERAL}", S.s30, "("): (S.s23, None, None),
-    # (rf"{WORDS}", S.s30, UNARY_OPERATIONS): (S.s30, SOp.del_, None),
-    # (rf"{LITERAL}", S.s30, UNARY_OPERATIONS): (S.s23, SOp.del_, None),
-
-    (r";", S.s23, None): (S.s21, None, None),
-    (r";", S.s23, BINARY_OPs): (S.s21, SOp.del_, None),
-    # (r";", S.s23, None): (S.s98, None, None),
-    (r"END\s*$", S.s21, None): (S.s99, None, None)
+    (r";", S.s23, None): ((S.s21, None, None), ""),
+    (r";", S.s23, BINARY_OPs): ((S.s21, SOp.del_, None), ""),
+    (r"END\s*$", S.s21, None): ((S.s99, None, None), ""),
 }
 new_graph = dict()
 for _key, _val in graph.items():
@@ -143,11 +129,13 @@ for _key, _val in graph.items():
         new_graph[_key] = _val
 
 graph = new_graph
+
+
 # print(*graph.items(), sep='\n')
 
 def _get_graph_state(current_state: Stats, shop_state, data: str) -> tuple:
     reg = None
-    print(current_state,"|", shop_state,"|", data)
+    # print(current_state, "|", shop_state, "|", data)
     current_choices: list[tuple] = [(key, val, reg) for key, val in graph.items() if
                                     key[1] == current_state and key[2] == shop_state and (
                                         reg := re.search(
@@ -156,58 +144,67 @@ def _get_graph_state(current_state: Stats, shop_state, data: str) -> tuple:
                                         )
                                     ) and (_rr := _r)
                                     ]
-    assert len(current_choices) == 1, f"Множественный Выбор: {str(current_choices)}, {current_state}, {shop_state}"
+    assert len(current_choices) < 2, f"Множественный Выбор: {str(current_choices)}, {current_state}, {shop_state}"
+    assert len(current_choices) > 0, f"Не найдено перехода!: {str(current_choices)}, {current_state}, {shop_state}"
+
     reg = current_choices[0][2]
     # print(((reg[0], reg[1]) if reg else ""), reg, current_choices[0][2][1], _rr)
     return current_choices[0]
 
 
 def parser(data: str):
+    start_data_len = len(data)
     VARIABLES = dict()
     current_state: Stats = S.s00
     shop = [None]
+    error_str = 'Строка должна начинаться с ключевого слова VAR'
+    print(data)
     while current_state not in FINISH_STATS:
-        print(data, shop)
-        key, val, reg, *_ = _get_graph_state(current_state, shop[-1], data)
+        # print(data, shop)
+        try:
+            key, [val, error_str], reg, *_ = _get_graph_state(current_state, shop[-1], data)
+        except AssertionError as e:
+            raise AssertionError(str(e) + "\n" + error_str) from e
 
-        if re.search(rf"^\s*{WORDS}\s*$", ' ' + reg[1] + ' ') and  current_state in variable_declaration_stats:
-            print(VARIABLES)
+        if re.search(rf"^\s*{WORDS}\s*$", ' ' + reg[1] + ' ') and current_state in variable_declaration_stats:
+            # print(VARIABLES)
             assert reg[1] not in VARIABLES, "Переменная объявлена дважды"
             VARIABLES[reg[1]] = None
         if re.search(rf"^\s*{WORDS}\s*$", ' ' + reg[1] + ' ') and current_state in variable_init_stats:
             assert reg[1] in VARIABLES, "Переменная не была объявлена"
-            VARIABLES[reg[1]] = S.s21
+            if VARIABLES[reg[1]] is None:
+                VARIABLES[reg[1]] = S.s21
         if re.search(rf"^\s*{WORDS}\s*$", ' ' + reg[1] + ' ') and current_state in use_variable_stats:
             assert reg[1] in VARIABLES, "Переменная не была объявлена"
-            assert VARIABLES.get(reg[1], None) is not None and not isinstance(VARIABLES.get(reg[1], None), Stats), "Переменная используется, хотя была объявлена, но не инициализирована"
-        if current_state in init_variable_end_stats:
+            assert VARIABLES.get(reg[1], None) is not None and not isinstance(VARIABLES.get(reg[1], None),
+                                                                              Stats), "Переменная используется, хотя была объявлена, но не инициализирована"
+        if reg[1] == ";" and current_state in init_variable_end_stats:
             if bool(_keys := [key for key, val in VARIABLES.items() if isinstance(val, Stats)]):
                 VARIABLES[_keys[0]] = True
 
         if val[2] != ReadDataStatus.not_read:
-            data = reg[2]
+            data = str(reg[2])
         current_state = val[0]
-        print(data, VARIABLES)
+        print(data.rjust(start_data_len), "\t", current_state, "\t|", VARIABLES, "\t|", shop)
 
-
-
-        # print(data[0], key, val, [data[0]])
         if val[1] == SOp.add:
             shop.append(reg[1])
         elif val[1] == SOp.del_:
             shop.pop(-1)
         elif val[1] == SOp.change:
             shop[-1] = reg[1]
-        assert 0 < len(shop) < SHOP_DEEP, f"Магазин либо переполнен, либо попытка удалить пустой магазин {shop}"
-    assert shop == [None], "Магазин должен быть пустым в конце программы"
+        assert 0 < len(shop), f"Попытка удалить конечный символ магазина: {shop}"
+        assert len(shop) < SHOP_DEEP, f"Магазин переполнен: {shop}"
+    assert shop == [None], f"Магазин должен быть пустым в конце программы: {shop}"
 
 
 try:
-    parser("VAR AS : LOGICAL;BEGIN AS = (1 .OR. ((0 .OR. 1) .OR. (( (.NOT. 0 .OR. 0)) .OR. 1)) ) .AND. 0 ;  END")
+    parser("VAR AS : LOGICAL;BEGIN AS = (1 .OR. (0 .OR. (0 .OR. 1))) .AND. 0 ;  END")
     raise Exception()
 except (AssertionError) as e:
     print(e)
     print('Ok')
+
 
 def test():
     parser("VAR AS : LOGICAL; BEGIN AS = 1; END  ")
@@ -235,6 +232,7 @@ def test():
     parser("VAR AS, SDFF : LOGICAL; BEGIN SDFF=0;AS = (.NOT. (1 .OR. (SDFF .OR. 0))) ; END  ")
     parser("VAR AS : LOGICAL;BEGIN AS = 1 .OR. ((1 .OR. 1) .OR. 1);  END")
     parser("VAR AS : LOGICAL;BEGIN AS = 1 .OR. (.NOT. 0) ;  END")
+    parser("VAR AS : LOGICAL;BEGIN AS = (1 .OR. ((0 .OR. 1) .OR. (( (.NOT. 0 .OR. 0)) .OR. 1)) ) .AND. 0 ;  END")
     parser(
         "VAR SDFG, AS, AW, SDFF, DS : LOGICAL; BEGIN SDFG=1; AS = (1 .OR. 0); AW=0; SDFG = (AW .OR. ((1 .AND. 1) .IMP. (.NOT. 0 .OR. (SDFG .OR. (0 .AND. 1))))); END ")
 
@@ -243,6 +241,10 @@ def test():
         "VAR",
         "VAR  : LOGICAL; BEGIN AS = 1; END  ",
         "VAR: ; BEGIN AS = 1; END  ",
+        "VAR , : LOGICAL;BEGIN AS = 0;  END",
+        "VAR AS RF : LOGICAL;BEGIN AS = 0;  END",
+        "VAR AS, RF DF : LOGICAL;BEGIN AS = 0;  END",
+        "VAR, AS, RF : LOGICAL;BEGIN AS = 0;  END",
         "VARDD : LOGICAL; BEGIN AS = 1; END  ",
         "VAR DD, : LOGICAL; BEGIN AS = 1; END  ",
         "VAR DD, DF, : LOGICAL; BEGIN AS = 1; END  ",
@@ -305,7 +307,8 @@ def test():
         "VAR AS : LOGICAL;BEGIN AS = (1 .OR. (0 .OR. 1) .OR. 0) ;  END"
         "VAR AS : LOGICAL;BEGIN AS = (1 .OR. ((0 .OR. 1) .OR. (0 .OR. 0)) .OR. 1) ;  END",
         "VAR AS : LOGICAL;BEGIN AS = (1 .OR. ((0 .OR. 1) .OR. ( (.NOT. 0 .OR. 0)) .OR. 1) ) ;  END",
-        "VAR AS : LOGICAL;BEGIN AS = (1 .OR. ((0 .OR. 1) .OR. (( (.NOT. 0 .OR. 0)) .OR. 1)) ) .AND. 0 ;  END",
+        "VAR AS DEEE : LOGICAL;BEGIN AS = (1 .OR. (0 .OR. (0 .OR. 1))) .AND. 0 ;  END",
+
     ]
     for ind, i in enumerate(error_tests):
         try:
@@ -316,12 +319,4 @@ def test():
             pass
     print('Все тесты прошли успешно')
 
-
 # test()
-
-
-
-
-
-
-
