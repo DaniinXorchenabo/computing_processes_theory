@@ -1,0 +1,5 @@
+VAR
+AS : LOGICAL;
+BEGIN
+    AS = (1 .OR. ((0 .OR. ) .OR. 1)) .AND. 0 ;
+END

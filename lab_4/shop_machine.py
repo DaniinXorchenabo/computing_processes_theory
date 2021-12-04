@@ -191,18 +191,21 @@ def _get_graph_state(current_state: Stats, shop_state, data: str) -> tuple:
 
 
 def parser(data: str):
+    last_data = data
     start_data_len = len(data)
     VARIABLES = dict()
     current_state: Stats = S.s00
     shop = [None]
     error_str = 'Строка должна начинаться с ключевого слова VAR'
     print(data)
+    reg = '  '
+
     while current_state not in FINISH_STATS:
         # print(data, shop)
         try:
             key, [val, error_str], reg, *_ = _get_graph_state(current_state, shop[-1], data)
         except AssertionError as e:
-            raise AssertionError(str(e) + "\n" + error_str) from e
+            raise AssertionError(str(e) + "\n" + error_str + "\nОшибка парсинга: \n" + last_data+'\nМежду `' + reg[1] + "` и `" + data  +'`') from e
 
         if re.search(rf"^\s*{WORDS}\s*$", ' ' + reg[1] + ' ') and current_state in variable_declaration_stats:
             # print(VARIABLES)
@@ -221,6 +224,7 @@ def parser(data: str):
                 VARIABLES[_keys[0]] = True
 
         if val[2] != ReadDataStatus.not_read:
+            last_data = data
             data = str(reg[2])
         current_state = val[0]
         print(data.rjust(start_data_len), "\t", current_state, "\t|", VARIABLES, "\t|", shop)
@@ -234,14 +238,10 @@ def parser(data: str):
         assert 0 < len(shop), f"Попытка удалить конечный символ магазина: {shop}"
         assert len(shop) < SHOP_DEEP, f"Магазин переполнен: {shop}"
     assert shop == [None], f"Магазин должен быть пустым в конце программы: {shop}"
+    return 'Цепочка подходит'
 
 
-try:
-    parser("VAR AS : LOGICAL;BEGIN AS = (1 .OR. ((0 .OR. 0) .OR. 1)) .AND. 0 ;  END В")
-    raise Exception()
-except (AssertionError) as e:
-    print(e)
-    print('Ok')
+
 
 
 def test():
@@ -358,3 +358,11 @@ def test():
     print('Все тесты прошли успешно')
 
 # test()
+
+if __name__ == "__main__":
+    try:
+        parser("VAR AS : LOGICAL;BEGIN AS = (1 .OR. ((0 .OR. 0) .OR. 1)) .AND. 0 ;  END ")
+        raise Exception()
+    except (AssertionError) as e:
+        print(e)
+        print('Ok')
