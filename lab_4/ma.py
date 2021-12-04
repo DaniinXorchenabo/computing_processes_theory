@@ -6,6 +6,7 @@ KEYWORDS = ["VAR", "END", "BEGIN", "LOGICAL"]
 WORDS = r"%s\s*[A-Za-z]+" % "".join([rf"(?!\s*{i}(?:[^A-Za-z]+|$))" for i in KEYWORDS])
 TYPE_WORD_LIST = ['LOGICAL']
 TYPE_WORD = r"%s\s*[A-Za-z]+" % "".join([rf"(?!\s*{i}(?:[^A-Za-z]+|$))" for i in KEYWORDS if i not in TYPE_WORD_LIST])
+LITERAL_list = [0, 1]
 LITERAL = r"(?:0|1)"
 PARAM_TYPE = r"(?:LOGICAL)"
 UNARY_OPs = frozenset([r".NOT."])
@@ -66,56 +67,93 @@ def exclude_shop_stats(*args):
 
 
 graph = {
-    (r"VAR\s+", S.s00, None): ((S.s11, None, None), "Не получается найти объявление переменной"),
-    (rf"{WORDS}", S.s11, None): ((S.s15, None, None), "Не получается найти объявление следующей переменной или `:` для типа переменных"),
+    (r"VAR\s+", S.s00, None): ((S.s11, None, None), f"Не получается найти корректное имя переменной"
+                                                    f" (должно состоять из латинских букв "
+                                                    f"и не являться ключевым словом "
+                                                    f"({', '.join([f'`{i}`' for i in KEYWORDS])}))"),
+    (rf"{WORDS}", S.s11, None): ((S.s15, None, None), "Не получается найти объявление следующей"
+                                                      " переменной или `:` для типа переменных"),
     (r",", S.s15, None): ((S.s11, None, None), "Не получается найти объявление следующей переменной"),
-    (r"\:", S.s15, None): ((S.s13, None, None), ""),
-    (rf"{PARAM_TYPE}", S.s13, None): ((S.s14, None, None), ""),
-    (rf";", S.s14, None): ((S.s20, None, None), ""),
-    (rf"BEGIN\s+", S.s20, None): ((S.s21, None, None), ""),
-    (rf"{WORDS}", S.s21, None): ((S.s22, None, None), ""),
-    (rf"=", S.s22, None): ((S.s30, None, None), ""),
+    (r"\:", S.s15, None): ((S.s13, None, None), "Ожидаемый тип переменной не найден"),
+    (rf"{PARAM_TYPE}", S.s13, None): ((S.s14, None, None), "Не найден ожидаемый символ `;` "),
+    (rf";", S.s14, None): ((S.s20, None, None), "Ожидаемая операторная скобка `BEGIN` не найдена"),
+    (rf"BEGIN\s+", S.s20, None): ((S.s21, None, None), f"Не найдено корректное название переменной "
+                                                       f"(должно состоять из латинских букв "
+                                                       f"и не являться ключевым словом"
+                                                       f" ({', '.join([f'`{i}`' for i in KEYWORDS])}))"),
+    (rf"{WORDS}", S.s21, None): ((S.s22, None, None), "Ожидаемый символ `=` не был найден"),
+    (rf"=", S.s22, None): ((S.s30, None, None), (_t2 := f"Корректное слово (должно состоять из "
+                                                        f"латинских букв и не являться"
+                                                        f" ключевым словом ({', '.join([f'`{i}`' for i in KEYWORDS])})),"
+                                                        f" литерал ({', '.join([f'`{i}`' for i in LITERAL_list])}),"
+                                                        f" открывающая скобка или "
+                                                        f"унарная операция {', '.join([f'`{i}`' for i in UNARY_OPs])} "
+                                                        f"не были найдена")),
 
-    (rf"{WORDS}", S.s30, None): ((S.s32, None, None), ""),
-    (rf"{WORDS}", S.s30, UNARY_OPs): ((S.s32, SOp.del_, None), ""),
-    (rf"{LITERAL}", S.s30, None): ((S.s32, None, None), ""),
-    (rf"{LITERAL}", S.s30, UNARY_OPs): ((S.s32, SOp.del_, None), ""),
+    (rf"{WORDS}", S.s30, None): ((S.s32, None, None), (_t1 := f" Ожидается одна из бинарных операций "
+                                                              f"({', '.join([f'`{i}`' for i in BINARY_OPs])}) "
+                                                              f"или символ завершения строки (`;`) ")),
+    (rf"{WORDS}", S.s30, UNARY_OPs): ((S.s32, SOp.del_, None), _t1),
+    (rf"{LITERAL}", S.s30, None): ((S.s32, None, None), _t1),
+    (rf"{LITERAL}", S.s30, UNARY_OPs): ((S.s32, SOp.del_, None), _t1),
 
-    (rf"{UNARY}", S.s30, None): ((S.s30, SOp.add, None), ""),
+    (rf"{UNARY}", S.s30, None): ((S.s30, SOp.add, None), (_t3 := f"Корректное слово (должно состоять из латинских букв"
+                                                                 f" и не являться  ключевым словом "
+                                                                 f"({', '.join([f'`{i}`' for i in KEYWORDS])})),"
+                                                                 f" литерал ({', '.join([f'`{i}`' for i in LITERAL_list])}),"
+                                                                 f" или открывающая скобка не были найдена")),
 
-    (rf"\(", S.s30, None): ((S.s31, SOp.add, None), ""),
-    (rf"\(", S.s30, UNARY_OPs): ((S.s31, SOp.change, None), ""),
+    (rf"\(", S.s30, None): ((S.s31, SOp.add, None), _t2),
+    (rf"\(", S.s30, UNARY_OPs): ((S.s31, SOp.change, None), _t3),
 
-    (rf"{UNARY}", S.s31, "("): ((S.s31, SOp.add, None), ""),
-    (rf"\(", S.s31, "("): ((S.s31, SOp.add, None), ""),
-    (rf"\(", S.s31, UNARY_OPs): ((S.s31, SOp.change, None), ""),
+    (rf"{UNARY}", S.s31, "("): ((S.s31, SOp.add, None), _t3),
+    (rf"\(", S.s31, "("): ((S.s31, SOp.add, None), _t2),
+    (rf"\(", S.s31, UNARY_OPs): ((S.s31, SOp.change, None), _t2),
 
-    (rf"{WORDS}", S.s31, "("): ((S.s32, None, None), ""),
-    (rf"{WORDS}", S.s31, UNARY_OPs): ((S.s32, SOp.del_, None), ""),
+    (rf"{WORDS}", S.s31, "("): ((S.s32, None, None), (_t4 := f" Ожидается одна из бинарных операций "
+                                                             f"({', '.join([f'`{i}`' for i in BINARY_OPs])}) "
+                                                             f", символ завершения строки (`;`) "
+                                                             f"или , если магазин не пуст, закрывающая скобка (`)`) ")),
+    (rf"{WORDS}", S.s31, UNARY_OPs): ((S.s32, SOp.del_, None), _t4),
 
-    (rf"{LITERAL}", S.s31, "("): ((S.s32, None, None), ""),
-    (rf"{LITERAL}", S.s31, UNARY_OPs): ((S.s32, SOp.del_, None), ""),
+    (rf"{LITERAL}", S.s31, "("): ((S.s32, None, None), _t4),
+    (rf"{LITERAL}", S.s31, UNARY_OPs): ((S.s32, SOp.del_, None), _t4),
 
-    (rf"{BINARY}", S.s32, None): ((S.s33, SOp.add, None), ""),
-    (rf"{BINARY}", S.s32, "("): ((S.s33, SOp.add, None), ""),
+    (rf"{BINARY}", S.s32, None): ((S.s33, SOp.add, None), _t3),
+    (rf"{BINARY}", S.s32, "("): ((S.s33, SOp.add, None), _t3),
 
-    (rf"\)", S.s32, "("): ((S.s32, SOp.del_, None), ""),
-    (rf"\)", S.s32, BINARY_OPs): ((S.s32, SOp.del_, ReadDataStatus.not_read), ""),
-    (rf";", S.s32, None): ((S.s21, None, None), ""),
-    (rf";", S.s32, BINARY_OPs): ((S.s21, SOp.del_, None), ""),
+    (rf"\)", S.s32, "("): ((S.s32, SOp.del_, None), _t4),
+    (rf"\)", S.s32, BINARY_OPs): ((S.s32, SOp.del_, ReadDataStatus.not_read), (_t5 := "Ожидается символ завершения строки (`;`)"
+                                                                              " (если магазин пуст)"
+                                                                              f"или , если магазин не пуст, закрывающая скобка (`)`) ")),
+    (rf";", S.s32, None): ((S.s21, None, None), "Ожидается либо закрывающая операторная скобка `END` как конец строки "
+                                                "либо корректное имя переменной "
+                                                f"(должно состоять из латинских букв "
+                                                f"и не являться ключевым словом"
+                                                f" ({', '.join([f'`{i}`' for i in KEYWORDS])}))"),
+    (rf";", S.s32, BINARY_OPs): ((S.s21, SOp.del_, None), "Ничего не ожидается, этот такт пустой"),
 
-    (rf"{WORDS}", S.s33, BINARY_OPs): ((S.s35, None, None), ""),
-    (rf"{LITERAL}", S.s33, BINARY_OPs): ((S.s35, None, None), ""),
-    (rf"\(", S.s33, BINARY_OPs): ((S.s31, SOp.add, None), ""),
+    (rf"{WORDS}", S.s33, BINARY_OPs): ((S.s35, None, None), _t5),
+    (rf"{LITERAL}", S.s33, BINARY_OPs): ((S.s35, None, None), _t5),
+    (rf"\(", S.s33, BINARY_OPs): ((S.s31, SOp.add, None), _t2),
 
-    (rf"\)", S.s34, "("): ((S.s32, SOp.del_, None), ""),
+    (rf"\)", S.s34, "("): ((S.s32, SOp.del_, None), (_t4 := f" Ожидается одна из бинарных операций, "
+                                                            f"если ни одна из бинарных операций "
+                                                            f"еще не была использована, "
+                                                             f"({', '.join([f'`{i}`' for i in BINARY_OPs])}) "
+                                                             f", символ завершения строки (`;`) "
+                                                             f"или , если магазин не пуст, закрывающая скобка (`)`) ")),
 
-    (rf";", S.s35, BINARY_OPs): ((S.s23, SOp.del_, ReadDataStatus.not_read), ""),
-    (rf"\)", S.s35, BINARY_OPs): ((S.s34, SOp.del_, ReadDataStatus.not_read), ""),
+    (rf";", S.s35, BINARY_OPs): ((S.s23, SOp.del_, ReadDataStatus.not_read), "Ничего не ожидается, этот такт пустой"),
+    (rf"\)", S.s35, BINARY_OPs): ((S.s34, SOp.del_, ReadDataStatus.not_read), "Ничего не ожидается, этот такт пустой"),
 
-    (r";", S.s23, None): ((S.s21, None, None), ""),
-    (r";", S.s23, BINARY_OPs): ((S.s21, SOp.del_, None), ""),
-    (r"END\s*$", S.s21, None): ((S.s99, None, None), ""),
+    (r";", S.s23, None): ((S.s21, None, None), "Ожидается либо закрывающая операторная скобка `END` как конец строки "
+                                                "либо корректное имя переменной "
+                                                f"(должно состоять из латинских букв "
+                                                f"и не являться ключевым словом"
+                                                f" ({', '.join([f'`{i}`' for i in KEYWORDS])}))"),
+    (r";", S.s23, BINARY_OPs): ((S.s21, SOp.del_, None), "Ничего не ожидается, этот такт пустой"),
+    (r"END\s*$", S.s21, None): ((S.s99, None, None), "Конечное состояние"),
 }
 new_graph = dict()
 for _key, _val in graph.items():
@@ -199,7 +237,7 @@ def parser(data: str):
 
 
 try:
-    parser("VAR AS : LOGICAL;BEGIN AS = (1 .OR. (0 .OR. (0 .OR. 1))) .AND. 0 ;  END")
+    parser("VAR AS : LOGICAL;BEGIN AS = (1 .OR. ((0 .OR. 0) .OR. 1)) .AND. 0 ;  END В")
     raise Exception()
 except (AssertionError) as e:
     print(e)
