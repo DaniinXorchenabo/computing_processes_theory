@@ -235,8 +235,8 @@ def parser(data):
 # print(OneBinaryExpression("((1) .OR. (0))"))
 
 
-while True:
-    try:
-        parser(input())
-    except (AssertionError, ValueError, TypeError) as e:
-        print("Ошибка:", e)
+# while True:
+#     try:
+#         parser(input())
+#     except (AssertionError, ValueError, TypeError) as e:
+#         print("Ошибка:", e)
