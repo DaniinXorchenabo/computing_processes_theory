@@ -48,6 +48,22 @@ pip install -r lab_4/requirements.txt
 
 папка `lab_4` содержит два парсера языка: рекурсивный и магазинный
 
+1. Запустить рекурсивный парсер:
+
+```
+cd lab_4
+python recursive_parser.py
+```
+
+2. Запустить магазинный парсер
+
+```
+cd lab_4
+python main.py
+```
+
+чтобы запустить рекурсивный парсер необходимо в [`.env`](lab_4/.env) файле 
+
 # Documents
 
 Отчёт (лабораторная № 2) [отчёт.docx](https://github.com/DaniinXorchenabo/computing_processes_theory/files/7924979/default.docx)
