@@ -226,7 +226,7 @@ def parser(data):
     # print(result)
     # print(tasks)
     # print(next_tasks)
-    print("Полученная строка:", ' '.join(recursion_chain(result + [None])))
+    return "Полученная строка:\n" + ' '.join(recursion_chain(result + [None]))
 
 
 # parser("""VAR SDFG, AS, AW, SDFF, DS, SDFG : LOGICAL; BEGIN AS = (1 .OR. 0) ; SDFG = (AW .OR. ((1 .AND. 1) .IMP. (.NOT. 0 .OR. (SDFG .OR. ((.NOT. 0) .AND. 1))))); END""")
@@ -234,9 +234,9 @@ def parser(data):
 # parser("""VAR AS, AW, SDFF, DS, SDFG : LOGICAL; BEGIN AS = (1 .OR. (AW .IMP. 0) .AND. 1 .AND. 1 .AND. (1 .OR. .NOT. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. (0 .OR. 1))))))))))))))) ; AW = 0; END""")
 # print(OneBinaryExpression("((1) .OR. (0))"))
 
-
-# while True:
-#     try:
-#         parser(input())
-#     except (AssertionError, ValueError, TypeError) as e:
-#         print("Ошибка:", e)
+if __name__ == '__main__':
+    while True:
+        try:
+            print(parser(input()))
+        except (AssertionError, ValueError, TypeError) as e:
+            print("Ошибка:", e)
