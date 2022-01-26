@@ -124,6 +124,45 @@ python main.py
 
 ## lab 3
 
+Тут было превращение недетерминированного конечного автомата в детерменированный конечный автомат
+
+![image](https://user-images.githubusercontent.com/45897837/151124580-92bdffb3-d3f7-43d4-8a1b-369a8dcc5ca7.png)
+ 
+ *Недетерменированный конечный автомат*
+ 
+ ![image](https://user-images.githubusercontent.com/45897837/151124671-f16835b4-a297-4a3a-acd6-56350b868bd2.png)
+
+*Детерминированный конечный автомат*
+
+Граф для реализации обхода для детерминированного конечного автомата
+
+```python
+graph = {
+    'S': {3: "A"},
+    'A': {4: "Z"},
+    'Z': {4: "JC"},
+    'JC': {3: "D", 4: "K"},
+    'D': {3: "G"},
+    'G': {4: "H"},
+    'H': {3: "Z"},
+    'K': {3: "M"},
+    'M': {3: "N"},
+    'N': {4: "Z"},
+}
+```
+
+### Run
+
+```
+python lab_3/main.py
+```
+
+### Demonstration
+
+![image](https://user-images.githubusercontent.com/45897837/151125365-f1e0916b-ef9f-4865-95f3-172af9af4428.png)
+
+*Пример работы программы*
+
 ## lab 2
 
 ## lab 1 (not interesting)
